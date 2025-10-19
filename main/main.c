@@ -15,9 +15,9 @@
 
 /**
  * @brief Calculate the mean value of the data from various servers
- * 
+ *
  * @todo Optimize this function to run faster
- * 
+ *
  * @return Calculated mean value
  */
 static int32_t calculateMean()
