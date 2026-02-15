@@ -4,6 +4,11 @@
 "idf.openOcdConfigs": [
     "board/esp32c3-builtin.cfg"
 ],
-"idf.portWin": "COM7",
-"idf.flashType": "JTAG"
+"idf.portWin": "COM5",
+"idf.flashType": "JTAG",
+"idf.currentSetup": "C:\\esp\\v5.5.2\\esp-idf",
+"idf.customExtraVars": {
+    "IDF_TARGET": "esp32c3"
+},
+"idf.monitorPort": "COM5"
 }
