@@ -9,7 +9,7 @@
  *
  * Performance bottlenecks:
  * - Sequential server requests create cumulative latency
- * - Each request has random 0-1000ms delay
+ * - Each request takes a random time between 0 and 2 s
  * - Connection pooling limits concurrent requests to 10
  */
 
