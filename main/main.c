@@ -11,24 +11,20 @@
  * - Sequential server requests create cumulative latency
  * - Each request has random 0-1000ms delay
  * - Connection pooling limits concurrent requests to 10
- *
- * Optimization opportunities:
- * - Implement concurrent/parallel requests
- * - Utilize connection pooling efficiently
- * - Consider caching strategies
  */
 
-#include <stdio.h>
+#include <esp_log.h>
+#include <esp_timer.h>
+#include <freertos/FreeRTOS.h>
+#include <freertos/task.h>
 #include <inttypes.h>
-#include "sdkconfig.h"
-#include "freertos/FreeRTOS.h"
-#include "freertos/task.h"
-#include "esp_timer.h"
 
 #include "library.h"
 
-// Total number of servers to request data from
-const int32_t nb_servers = 100;
+static const char *TAG = "main";
+
+//! Total number of servers to request data from
+static const int32_t nb_servers = 100;
 
 /**
  * @brief Calculate the mean value of the data from various servers
@@ -37,9 +33,9 @@ const int32_t nb_servers = 100;
  *
  * @return Calculated mean value
  */
-static int32_t calculateMean()
+static int32_t calculateMean(void)
 {
-    int64_t sum = 0;  // Use 64-bit to prevent overflow during summation
+    int64_t sum = 0; // Use 64-bit to prevent overflow during summation
 
     for (int32_t uid = 0; uid < nb_servers; uid++)
     {
@@ -54,13 +50,19 @@ static int32_t calculateMean()
  */
 void app_main(void)
 {
-    printf("Start calculating mean value...\n");
-    printf("Requesting data from %ld servers...\n", nb_servers);
+    // The mock server returns its uid as data, so the mean of the values
+    // 0 ... nb_servers - 1 is known in advance
+    const int32_t expected_mean = (nb_servers - 1) / 2;
+
+    ESP_LOGI(TAG, "Requesting data from %" PRId32 " servers...", nb_servers);
 
     // Performance measurement using ESP32's high-resolution timer
-    const uint64_t start_us = esp_timer_get_time();
+    const int64_t start_us = esp_timer_get_time();
     const int32_t mean = calculateMean();
-    const uint64_t end_us = esp_timer_get_time();
+    const int64_t elapsed_ms = (esp_timer_get_time() - start_us) / 1000;
 
-    printf("Mean value: %ld (time: %lldms)\n", mean, (end_us - start_us) / 1000);
+    ESP_LOGI(TAG,
+             "Mean value: %" PRId32 " (expected %" PRId32 ", used %" PRId64
+             " ms)",
+             mean, expected_mean, elapsed_ms);
 }

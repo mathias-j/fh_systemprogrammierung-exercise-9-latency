@@ -1,20 +1,33 @@
 /**
  * @file library.c
+ * @author Mathias Jochum
  * @brief Server communication simulation
+ * @date 2024-12-06
+ *
+ * @copyright Copyright (c) 2024
  *
  * This file implements mock server communication functions that simulate
  * real-world network latency and connection management for testing purposes.
  * The implementation is designed to help analyze and optimize latency-sensitive
- * applications by providing realistic timing behavior without actual network I/O.
+ * applications by providing realistic timing behavior without actual network
+ * I/O.
  */
 
 #include "library.h"
 
+#include <esp_log.h>
+#include <esp_random.h>
 #include <freertos/FreeRTOS.h>
 #include <freertos/task.h>
-#include <stdio.h>
+#include <stddef.h>
 
-#include <esp_random.h>
+static const char *TAG = "library";
+
+//! Number of currently open connections, shared by all calling tasks
+static size_t connection_count = 0;
+
+//! Protects connection_count against concurrent read-modify-write accesses
+static portMUX_TYPE connection_count_lock = portMUX_INITIALIZER_UNLOCKED;
 
 /**
  * @brief Mock function to request data from server
@@ -26,33 +39,37 @@
  * 4. Connection cleanup
  *
  * The function implements a simple connection pool mechanism that prevents
- * more than 10 simultaneous connections to avoid resource exhaustion.
- * If the connection limit is exceeded, the function enters an infinite loop
- * printing error messages - this simulates a server overload condition.
+ * more than MAX_CONNECTIONS simultaneous connections to avoid resource
+ * exhaustion. If the connection limit is exceeded, the function enters an
+ * infinite loop printing error messages - this simulates a server overload
+ * condition.
+ *
+ * The function may be called from several tasks at the same time; the
+ * connection counter is updated inside a critical section.
  *
  * @param uid Unique identifier of the server to get data from
  * @return int32_t Server response data (mock implementation returns the UID)
  *
  * @note Uses esp_random() to generate realistic network timing variability
- * @warning Will hang indefinitely if connection count exceeds 10
+ * @warning Will hang indefinitely if connection count exceeds MAX_CONNECTIONS
  */
 int32_t requestDataFromServer(int32_t uid)
 {
-    static size_t connection_count = 0;
-
     // Simulate a random connection latency between 0-999ms
     const uint32_t connection_latency_ms = esp_random() % 1000;
 
     // Build up the connection - increment active connection counter
-    connection_count++;
+    taskENTER_CRITICAL(&connection_count_lock);
+    const size_t open_connections = ++connection_count;
+    taskEXIT_CRITICAL(&connection_count_lock);
 
     // Connection pool limit check - prevent resource exhaustion
     // In real systems, this would return an error or queue the request
-    if(connection_count > MAX_CONNECTIONS)
+    if (open_connections > MAX_CONNECTIONS)
     {
-        for(;;)
+        for (;;)
         {
-            printf("Too many connections - server overloaded\n");
+            ESP_LOGE(TAG, "Too many connections - server overloaded");
             vTaskDelay(pdMS_TO_TICKS(1000));
         }
     }
@@ -67,9 +84,12 @@ int32_t requestDataFromServer(int32_t uid)
     vTaskDelay(pdMS_TO_TICKS(connection_latency_ms));
 
     // Close the connection - decrement active connection counter
+    taskENTER_CRITICAL(&connection_count_lock);
     connection_count--;
+    taskEXIT_CRITICAL(&connection_count_lock);
 
     // Process response and return mock data
-    // In real implementation: parse response, handle errors, return actual data
+    // In real implementation: parse response, handle errors, return actual
+    // data
     return uid; // For now just return the uid as placeholder data
 }
