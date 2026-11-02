@@ -10,8 +10,6 @@
   ],
   "clangd.arguments": [
     "--background-index",
-    "--query-driver=**",
-    "--compile-commands-dir=c:\\git\\fh_systemprogrammierung\\fh_systemprogrammierung-exercise-9-latency\\build"
-  ],
-  "clangd.path": "C:\\Espressif\\tools\\esp-clangd\\esp-21.1.3_20260408\\esp-clangd\\bin\\clangd.exe"
+    "--query-driver=**"
+  ]
 }
